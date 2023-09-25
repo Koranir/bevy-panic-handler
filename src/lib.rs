@@ -1,16 +1,30 @@
+//! A wrapper for panics using Bevy's plugin system.
+//!
+//! On supported platforms (windows, macos, linux) will produce a popup using the `msgbox` crate in addition to writing via `log::error!`, or if `bevy::log::LogPlugin` is not enabled, `stderr`.
+
 use bevy::prelude::*;
 
-pub struct PanicPopup;
+pub struct PanicHandler;
 
-fn popup_panic_hook(info: &std::panic::PanicInfo) {
-    let info = info.to_string();
-    bevy::log::error!("Unhandled Panic: {}", info);
-    #[cfg(all(not(test), any(target_os = "windows", target_os = "macos", target_os = "linux")))]
-    { _ = msgbox::create("Unhandled Panic", &info, msgbox::IconType::Error); }
-}
-
-impl Plugin for PanicPopup {
-    fn build(&self, _: &mut App) {
-        std::panic::set_hook(Box::new(popup_panic_hook));
+impl Plugin for PanicHandler {
+    fn build(&self, app: &mut App) {
+        let use_log = app.is_plugin_added::<bevy::log::LogPlugin>();
+        std::panic::set_hook(Box::new(move |info| {
+            let info = format!(
+                "Unhandled panic @ {}:\n{}",
+                info.location()
+                    .map_or("Unknown Location".to_owned(), ToString::to_string),
+                info.payload().downcast_ref::<String>().unwrap_or(
+                    &((
+                        *info.payload()
+                        .downcast_ref::<&str>()
+                        .unwrap_or(&"No Info")
+                    ).to_string())
+                )
+            );
+            if use_log { error!("{}", info); } else { eprintln!("{info}"); }
+            #[cfg(all(not(test), any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+            { _ = msgbox::create("Fatal Error", &info, msgbox::IconType::Error); }
+        }));
     }
 }
