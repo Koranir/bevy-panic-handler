@@ -14,3 +14,7 @@ fn main() {
         // Normal usage...
 }
 ```
+
+## Examples
+
+[![popup image](./images/Popup.png 'popup.rs')](./examples/popup.rs)
