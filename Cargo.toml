@@ -1,6 +1,6 @@
 [package]
 name = "bevy-panic-handler"
-version = "1.0.2"
+version = "1.1.0"
 edition = "2021"
 authors = ["Daniel Yoon"]
 description = "A Bevy plugin that creates a popup message and logs to error on panic"
