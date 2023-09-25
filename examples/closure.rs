@@ -18,8 +18,6 @@ fn main() {
                 })
                 .build(),
         )
-        .add_systems(Startup, || {
-            panic!("Example Error. Closures work fine too.")
-        })
+        .add_systems(Startup, || panic!("Example Error. Closures work fine too."))
         .run();
 }

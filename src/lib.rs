@@ -16,6 +16,7 @@ pub struct PanicHandlerBuilder {
     custom_hook: Option<Arc<dyn PanicHandleFn<()>>>,
 }
 impl PanicHandlerBuilder {
+    #[must_use]
     /// Builds the `PanicHandler`
     pub fn build(self) -> PanicHandler {
         PanicHandler {
@@ -42,24 +43,28 @@ impl PanicHandlerBuilder {
         }
     }
 
+    #[must_use]
     /// After the popup is closed, the previously existing panic hook will be called
     pub fn take_call_from_existing(mut self) -> Self {
         self.custom_hook = Some(Arc::new(std::panic::take_hook()));
         self
     }
 
+    #[must_use]
     /// After the popup is closed, this function will be called
     pub fn set_call_func(mut self, call_func: impl PanicHandleFn<()>) -> Self {
         self.custom_hook = Some(Arc::new(call_func));
         self
     }
 
+    #[must_use]
     /// The popup title will be set to the result of this function
     pub fn set_title_func(mut self, title_func: impl PanicHandleFn<String>) -> Self {
         self.custom_name = Some(Arc::new(title_func));
         self
     }
 
+    #[must_use]
     /// The popup body will be set to the result of this function
     pub fn set_body_func(mut self, body_func: impl PanicHandleFn<String>) -> Self {
         self.custom_body = Some(Arc::new(body_func));
@@ -75,11 +80,14 @@ pub struct PanicHandler {
     pub custom_hook: Arc<dyn PanicHandleFn<()>>,
 }
 impl PanicHandler {
+    #[must_use]
+    #[allow(clippy::new_ret_no_self)]
     /// Create a new builder. The custom hook does nothing.
     pub fn new() -> PanicHandlerBuilder {
         PanicHandlerBuilder::default()
     }
 
+    #[must_use]
     /// Create a new builder. The custom hook is taken from `std::panic::take_hook()`
     pub fn new_take_old() -> PanicHandlerBuilder {
         PanicHandlerBuilder::default().take_call_from_existing()
@@ -98,15 +106,10 @@ impl Plugin for PanicHandler {
             bevy::log::error!("{title_string}\n{info_string}");
 
             // Don't interrupt test execution with a popup, and dont try on unsupported platforms.
-            #[cfg(all(
-                not(test),
-                any(target_os = "windows", target_os = "macos", target_os = "linux")
-            ))]
-            {
-                _ = msgbox::create(&title_string, &info_string, msgbox::IconType::Error);
-            }
+            #[cfg(all(not(test), any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+            { _ = msgbox::create(&title_string, &info_string, msgbox::IconType::Error); }
 
-            (handler.custom_hook)(info)
+            (handler.custom_hook)(info);
         }));
     }
 }

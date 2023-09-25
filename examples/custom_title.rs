@@ -14,8 +14,6 @@ fn main() {
                 })
                 .build(),
         )
-        .add_systems(Startup, || {
-            panic!("Example Message")
-        })
+        .add_systems(Startup, || panic!("Example Message"))
         .run();
 }
