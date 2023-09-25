@@ -12,17 +12,11 @@ use bevy::prelude::*;
 fn main() {
     App::new()
         .add_plugins(bevy::log::LogPlugin)
-        .add_plugins(bevy_panic_handler::PanicHandler::default())
-        // Normal usage...
+        .add_plugins(bevy_panic_handler::PanicHandler::new().build())
+        // Normal bevy code...
 }
 ```
 
-`PanicHandler::default()` will only create a popup and log to error, removing any previous panic handler.
-
-`PanicHandler::new(..)` takes a function or static closure to call once the popup is closed.
-
-`PanicHandler::default_take_panic()` will take the already-existing panic handler and call that once the popup is closed. (If the default panic handler is used and the logger is initialized, the panic contents will be written twice to stdout).
-
-## Examples
+## Example
 
 [![popup image](./images/Popup.png 'popup.rs')](./examples/popup.rs)
