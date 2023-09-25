@@ -6,23 +6,20 @@ fn main() {
 
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(bevy_panic_handler::PanicHandler::new(move |_| {
-            println!("Panicked! Arg 1 was: {running_name}");
-        }))
+        .add_plugins(
+            bevy_panic_handler::PanicHandler::new()
+                .set_call_func(move |_| {
+                    println!("Panicked! Arg 1 was: {running_name}");
+                })
+                .set_body_func(|_| {
+                    let mut res_str = String::new();
+                    std::io::stdin().read_line(&mut res_str).unwrap();
+                    format!("Panicked, also got me a message: {res_str}")
+                })
+                .build(),
+        )
         .add_systems(Startup, || {
-            panic!("Example Error.\nNewlines AOK. 😃\n{} too.", "fmt strings")
+            panic!("Example Error. Closures work fine too.")
         })
         .run();
 }
-
-// Result:
-
-// (omitted)
-// 2023-09-25T23:00:21.128651Z ERROR bevy_panic_handler: Unhandled panic! @ examples/closure.rs:12:13:
-// Example Error.
-// Newlines AOK. 😃
-// fmt strings too.
-// (omitted)
-// Panicked! Arg 1 was: target/debug/examples/closure
-// Encountered a panic in system `closure::main::{{closure}}`!
-// Encountered a panic in system `bevy_app::main_schedule::Main::run_main`!
