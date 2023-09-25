@@ -9,11 +9,13 @@ use bevy::prelude::*;
 pub trait PanicHandleFn: Fn(&std::panic::PanicInfo) + Send + Sync + 'static {}
 impl<T: Fn(&std::panic::PanicInfo) + Send + Sync + 'static> PanicHandleFn for T {}
 
+/// Bevy plugin that opens a popup window on panic & logs an error
 #[derive(Default)]
 pub struct PanicHandler {
     custom_hook: Option<Arc<dyn PanicHandleFn>>,
 }
 impl PanicHandler {
+    /// Create a new `PanicHandler` with a function to call after the popup is closed. If you only want the popup, use `PanicHandler::default()`
     #[must_use]
     pub fn new(panic_handler: impl PanicHandleFn) -> Self {
         Self {
@@ -21,6 +23,7 @@ impl PanicHandler {
         }
     }
 
+    /// Create a new `PanicHandler`, calling the already existing panic hook after the popup is closed
     #[must_use]
     pub fn default_take_panic() -> Self {
         Self {
