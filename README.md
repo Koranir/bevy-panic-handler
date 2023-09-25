@@ -1,4 +1,4 @@
-# Bevy Panic handler
+# Bevy Panic Handler
 
 [![Crates.io](https://img.shields.io/crates/v/bevy-panic-handler)](https://crates.io/crates/bevy-panic-handler)
 
