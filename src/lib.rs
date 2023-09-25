@@ -15,14 +15,18 @@ impl Plugin for PanicHandler {
                 info.location()
                     .map_or("Unknown Location".to_owned(), ToString::to_string),
                 info.payload().downcast_ref::<String>().unwrap_or(
-                    &((
-                        *info.payload()
-                        .downcast_ref::<&str>()
-                        .unwrap_or(&"No Info")
-                    ).to_string())
+                    &((*info.payload().downcast_ref::<&str>().unwrap_or(&"No Info")).to_string())
                 )
             );
-            if use_log { error!("{}", info); } else { eprintln!("{info}"); }
+
+            if use_log {
+                // Known limitations: Logging in tests prints to stdout immediately.
+                bevy::log::error!("{info}");
+            } else {
+                eprintln!("{info}");
+            }
+
+            // Dont interrupt test execution with a popup, and dont try on unsupported platforms.
             #[cfg(all(not(test), any(target_os = "windows", target_os = "macos", target_os = "linux")))]
             { _ = msgbox::create("Fatal Error", &info, msgbox::IconType::Error); }
         }));
