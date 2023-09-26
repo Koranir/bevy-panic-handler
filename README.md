@@ -17,6 +17,8 @@ fn main() {
 }
 ```
 
+Check examples for more usages.
+
 ## Example
 
 [![popup image](./images/Popup.png 'popup.rs')](./examples/popup.rs)
