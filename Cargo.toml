@@ -10,5 +10,5 @@ keywords = ["bevy", "panic", "popup"]
 categories = ["game-engines"]
 
 [dependencies]
-bevy = "0.11.2"
+bevy = { version = "^0.11.0", default-features = false }
 msgbox = "0.7.0"
