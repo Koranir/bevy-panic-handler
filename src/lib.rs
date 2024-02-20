@@ -2,6 +2,8 @@
 //!
 //! On supported platforms (windows, macos, linux) will produce a popup using the `msgbox` crate in addition to writing via `log::error!`, or if `bevy::log::LogPlugin` is not enabled, `stderr`.
 
+#![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
+
 use std::sync::Arc;
 
 use bevy::prelude::*;
@@ -21,25 +23,26 @@ impl PanicHandlerBuilder {
     pub fn build(self) -> PanicHandler {
         PanicHandler {
             custom_title: {
-                self.custom_name
-                    .unwrap_or(Arc::new(|_: &std::panic::PanicInfo| {
-                        "Fatal Error".to_owned()
-                    }))
+                self.custom_name.unwrap_or_else(|| {
+                    Arc::new(|_: &std::panic::PanicInfo| "Fatal Error".to_owned())
+                })
             },
             custom_body: {
-                self.custom_body.unwrap_or(Arc::new(|info| {
-                    format!(
-                        "Unhandled panic! @ {}:\n{}",
-                        info.location()
-                            .map_or("Unknown Location".to_owned(), ToString::to_string),
-                        info.payload().downcast_ref::<String>().unwrap_or(
-                            &((*info.payload().downcast_ref::<&str>().unwrap_or(&"No Info"))
-                                .to_string())
+                self.custom_body.unwrap_or_else(|| {
+                    Arc::new(|info| {
+                        format!(
+                            "Unhandled panic! @ {}:\n{}",
+                            info.location()
+                                .map_or("Unknown Location".to_owned(), ToString::to_string),
+                            info.payload().downcast_ref::<String>().unwrap_or(
+                                &((*info.payload().downcast_ref::<&str>().unwrap_or(&"No Info"))
+                                    .to_string())
+                            )
                         )
-                    )
-                }))
+                    })
+                })
             },
-            custom_hook: { self.custom_hook.unwrap_or(Arc::new(|_| {})) },
+            custom_hook: { self.custom_hook.unwrap_or_else(|| Arc::new(|_| {})) },
         }
     }
 
@@ -106,8 +109,13 @@ impl Plugin for PanicHandler {
             bevy::log::error!("{title_string}\n{info_string}");
 
             // Don't interrupt test execution with a popup, and dont try on unsupported platforms.
-            #[cfg(all(not(test), any(target_os = "windows", target_os = "macos", target_os = "linux")))]
-            { _ = msgbox::create(&title_string, &info_string, msgbox::IconType::Error); }
+            #[cfg(all(
+                not(test),
+                any(target_os = "windows", target_os = "macos", target_os = "linux")
+            ))]
+            {
+                _ = msgbox::create(&title_string, &info_string, msgbox::IconType::Error);
+            }
 
             (handler.custom_hook)(info);
         }));
