@@ -114,7 +114,14 @@ impl Plugin for PanicHandler {
                 any(target_os = "windows", target_os = "macos", target_os = "linux")
             ))]
             {
-                _ = msgbox::create(&title_string, &info_string, msgbox::IconType::Error);
+                if let Err(e) = native_dialog::MessageDialog::new()
+                    .set_title(&title_string)
+                    .set_text(&info_string)
+                    .set_type(native_dialog::MessageType::Error)
+                    .show_alert()
+                {
+                    bevy::log::error!("{e}");
+                }
             }
 
             (handler.custom_hook)(info);
