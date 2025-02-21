@@ -8,8 +8,14 @@ use std::sync::Arc;
 
 use bevy::prelude::*;
 
-pub trait PanicHandleFn<Res>: Fn(&std::panic::PanicInfo) -> Res + Send + Sync + 'static {}
-impl<Res, T: Fn(&std::panic::PanicInfo) -> Res + Send + Sync + 'static> PanicHandleFn<Res> for T {}
+pub trait PanicHandleFn<Res>:
+    Fn(&std::panic::PanicHookInfo) -> Res + Send + Sync + 'static
+{
+}
+impl<Res, T: Fn(&std::panic::PanicHookInfo) -> Res + Send + Sync + 'static> PanicHandleFn<Res>
+    for T
+{
+}
 
 #[derive(Default)]
 pub struct PanicHandlerBuilder {
@@ -24,7 +30,7 @@ impl PanicHandlerBuilder {
         PanicHandler {
             custom_title: {
                 self.custom_name.unwrap_or_else(|| {
-                    Arc::new(|_: &std::panic::PanicInfo| "Fatal Error".to_owned())
+                    Arc::new(|_: &std::panic::PanicHookInfo| "Fatal Error".to_owned())
                 })
             },
             custom_body: {
