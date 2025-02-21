@@ -22,3 +22,9 @@ Check examples for more usages.
 ## Example
 
 [![popup image](./images/Popup.png 'popup.rs')](./examples/popup.rs)
+
+## Version Compatibility
+
+| Bevy   | `bevy-panic-handler` |
+| 0.15.0 |                4.0.0 |
+| 0.14.0 |                3.0.0 |
