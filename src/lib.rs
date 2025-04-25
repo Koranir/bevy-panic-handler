@@ -1,6 +1,6 @@
 //! A wrapper for panics using Bevy's plugin system.
 //!
-//! On supported platforms (windows, macos, linux) will produce a popup using the `msgbox` crate in addition to writing via `log::error!`, or if `bevy::log::LogPlugin` is not enabled, `stderr`.
+//! On supported platforms (windows, macos, linux) will produce a popup using the `msgbox` crate in addition to logging through `bevy_log` if the `log` feature is enabled.
 
 #![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
 
@@ -19,64 +19,65 @@ impl<Res, T: Fn(&std::panic::PanicHookInfo) -> Res + Send + Sync + 'static> Pani
 
 #[derive(Default)]
 pub struct PanicHandlerBuilder {
-    custom_name: Option<Arc<dyn PanicHandleFn<String>>>,
-    custom_body: Option<Arc<dyn PanicHandleFn<String>>>,
-    custom_hook: Option<Arc<dyn PanicHandleFn<()>>>,
+    name: Option<Arc<dyn PanicHandleFn<String>>>,
+    body: Option<Arc<dyn PanicHandleFn<String>>>,
+    hook: Option<Arc<dyn PanicHandleFn<()>>>,
 }
 impl PanicHandlerBuilder {
     #[must_use]
     /// Builds the `PanicHandler`
     pub fn build(self) -> PanicHandler {
         PanicHandler {
-            custom_title: {
-                self.custom_name.unwrap_or_else(|| {
+            title: {
+                self.name.unwrap_or_else(|| {
                     Arc::new(|_: &std::panic::PanicHookInfo| "Fatal Error".to_owned())
                 })
             },
-            custom_body: {
-                self.custom_body.unwrap_or_else(|| {
+            body: {
+                self.body.unwrap_or_else(|| {
                     Arc::new(|info| {
                         format!(
-                            "Unhandled panic! @ {}:\n{}",
+                            "Unhandled panic! at {}:\n{}",
                             info.location()
                                 .map_or("Unknown Location".to_owned(), ToString::to_string),
-                            info.payload().downcast_ref::<String>().unwrap_or(
-                                &((*info.payload().downcast_ref::<&str>().unwrap_or(&"No Info"))
-                                    .to_string())
+                            info.payload().downcast_ref::<String>().map_or_else(
+                                || (*info.payload().downcast_ref::<&str>().unwrap_or(&"No Info"))
+                                    .to_string(),
+                                ToOwned::to_owned,
                             )
                         )
                     })
                 })
             },
-            custom_hook: { self.custom_hook.unwrap_or_else(|| Arc::new(|_| {})) },
+            hook: { self.hook.unwrap_or_else(|| Arc::new(|_| {})) },
         }
     }
 
     #[must_use]
     /// After the popup is closed, the previously existing panic hook will be called
     pub fn take_call_from_existing(mut self) -> Self {
-        self.custom_hook = Some(Arc::new(std::panic::take_hook()));
+        self.hook = Some(Arc::new(std::panic::take_hook()));
         self
     }
 
     #[must_use]
     /// After the popup is closed, this function will be called
     pub fn set_call_func(mut self, call_func: impl PanicHandleFn<()>) -> Self {
-        self.custom_hook = Some(Arc::new(call_func));
+        self.hook = Some(Arc::new(call_func));
         self
     }
 
     #[must_use]
     /// The popup title will be set to the result of this function
     pub fn set_title_func(mut self, title_func: impl PanicHandleFn<String>) -> Self {
-        self.custom_name = Some(Arc::new(title_func));
+        self.name = Some(Arc::new(title_func));
         self
     }
 
     #[must_use]
     /// The popup body will be set to the result of this function
     pub fn set_body_func(mut self, body_func: impl PanicHandleFn<String>) -> Self {
-        self.custom_body = Some(Arc::new(body_func));
+        self.body = Some(Arc::new(body_func));
         self
     }
 }
@@ -84,9 +85,9 @@ impl PanicHandlerBuilder {
 /// Bevy plugin that opens a popup window on panic & logs an error
 #[derive(Clone)]
 pub struct PanicHandler {
-    pub custom_title: Arc<dyn PanicHandleFn<String>>,
-    pub custom_body: Arc<dyn PanicHandleFn<String>>,
-    pub custom_hook: Arc<dyn PanicHandleFn<()>>,
+    pub title: Arc<dyn PanicHandleFn<String>>,
+    pub body: Arc<dyn PanicHandleFn<String>>,
+    pub hook: Arc<dyn PanicHandleFn<()>>,
 }
 impl PanicHandler {
     #[must_use]
@@ -107,30 +108,36 @@ impl Plugin for PanicHandler {
     fn build(&self, _: &mut App) {
         let handler = self.clone();
         std::panic::set_hook(Box::new(move |info| {
-            let title_string = (handler.custom_title)(info);
-            let info_string = (handler.custom_body)(info);
+            #[cfg(not(test))]
+            let title_string = (handler.title)(info);
+            #[cfg(not(test))]
+            let info_string = (handler.body)(info);
 
-            // Known limitations: Logging in tests prints to stdout immediately.
             // This will print duplicate messages to stdout if the default panic hook is being used & env_logger is initialized.
+            #[cfg(all(not(test), feature = "log"))]
             bevy::log::error!("{title_string}\n{info_string}");
 
             // Don't interrupt test execution with a popup, and dont try on unsupported platforms.
             #[cfg(all(
                 not(test),
-                any(target_os = "windows", target_os = "macos", target_os = "linux")
+                any(target_os = "windows", target_os = "macos", target_family = "unix")
             ))]
             {
-                if let Err(e) = native_dialog::MessageDialog::new()
+                let builder = native_dialog::MessageDialogBuilder::default()
                     .set_title(&title_string)
                     .set_text(&info_string)
-                    .set_type(native_dialog::MessageType::Error)
-                    .show_alert()
-                {
+                    .set_level(native_dialog::MessageLevel::Error);
+                if let Err(e) = builder.alert().show() {
+                    #[cfg(feature = "log")]
                     bevy::log::error!("{e}");
+                    #[cfg(not(feature = "log"))]
+                    {
+                        _ = e;
+                    }
                 }
             }
 
-            (handler.custom_hook)(info);
+            (handler.hook)(info);
         }));
     }
 }
