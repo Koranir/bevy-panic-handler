@@ -1,6 +1,6 @@
 //! A wrapper for panics using Bevy's plugin system.
 //!
-//! On supported platforms (windows, macos, linux) will produce a popup using the `msgbox` crate in addition to logging through `bevy_log` if the `log` feature is enabled.
+//! On supported platforms (windows, macos, linux), the plugin will produce a popup using the `native_dialog` crate in addition to logging through `bevy_log` if the `log` feature is enabled.
 
 #![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
 
